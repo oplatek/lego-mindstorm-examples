@@ -1,0 +1,119 @@
+/*Written by Ondrej Platek www.platek.euweb.cz WITHOUT WARRANTY but WITH permission to free copying*/
+#define OUT_L OUT_B // left motor
+#define OUT_R OUT_C // right motor
+#define OUT_BOTH OUT_BC // both motors
+#define LIGHT_SEN IN_3 // light sensor
+
+#define MSG_LINE LCD_LINE1
+#define VAL_LINE LCD_LINE2
+#define ERR_LINE LCD_LINE3
+
+#define P 50
+#define I 50
+#define D 50
+
+#define MAXFILESIZE 5000
+#define LOOPTIME   10000
+
+#define ERR_FILE "We cant log more. File exceeded its limit."
+#define MSG_COLOR1 "Put the sensor above line"
+#define MSG_COLOR2 "Put the sensor from the line"
+#define MSG_BUSY   "Working..."
+#define MSG_FIN   "Finished! Place robot at START!"
+
+#define SAMPLES 100 // num of  learning samples
+#define HIST_LEN 3  // lenght of history used for smoothing 
+#define BASE_SPEED 50;
+
+int loopCount;
+byte fileHandle;
+int fileSize;
+
+unsigned int lineColor;
+unsigned int envColor;
+int oldDistance;
+float bending;
+
+sub Log_DisplayLightValue (int val) {
+  string lcStr;
+  string vStr;
+  string msg;
+
+  // output results
+  lcstr = numtostr(loopcount);
+  vstr = numtostr(val);
+  msg = lcstr + " : " + vstr;
+
+  // LCD output
+  NumOut(0, VAL_LINE, false, val);
+  TextOut(0, MSG_LINE, msg);
+
+  // Writing to file
+  if( fileSize + 10 > MAXFILESIZE ) {
+    TextOut(20,ERR_LINE,ERR_FILE);
+  } 
+  else {
+    unsigned int bytesWritten = 0;
+    WriteLnString(fileHandle,vStr,bytesWritten);
+    fileSize += bytesWritten;
+  }
+}
+
+
+sub FollowLine(int loopTime) {
+  int theSpeed;
+  long t;
+  int val;
+  
+  // start looping
+  t = CurrentTick() + loopTime;
+  while (t > CurrentTick())
+  {
+    // read the light sensor value
+    val = SensorRaw(LIGHT_SEN);
+
+    // log and display sensor value
+    if( (loopCount % 3) == 0 ) {
+      Log_DisplayLightValue(val);
+    }
+    
+    // set speed for motor 1
+    int distance = abs(lineColor - val); 
+    int left = BASE_SPEED + ( 20 / (abs(distance -oldDistance)+1) ); 
+    int right = left;
+      
+    RotateMotorPID(OUT_L, left, 180, P, I, D);
+    RotateMotorPID(OUT_R, right, 180, P, I, D);
+
+    oldDistance = distance;
+    loopCount++;
+  }
+  // 10 second loop is done
+  return;
+}
+
+
+/******************************* task main *************************/
+task main() {
+  byte fileHandle;
+  // TODO check if exist
+  CreateFile("op_follow.txt", MAXFILESIZE, fileHandle);
+
+  SetSensorType(LIGHT_SEN, IN_TYPE_LIGHT_ACTIVE);
+  SetSensorMode(LIGHT_SEN, IN_MODE_RAW);
+
+  defineColors(); 
+  oldDistance = 0;
+
+  // call subroutine
+  FollowLine(LOOPTIME);
+  
+  // stop both motors
+  Off(OUT_BOTH);
+  
+  // let user see the last message
+  Wait(50000); 
+
+  CloseFile(fileHandle);
+}
+
