@@ -1,0 +1,18 @@
+#define LIGHT_SEN IN_3 // light sensor
+
+task main(){
+  // init sensor light 
+  SetSensorType(LIGHT_SEN, IN_TYPE_LIGHT_ACTIVE);
+  SetSensorMode(LIGHT_SEN, IN_MODE_RAW);
+  int x;
+
+  while(true){
+    x = SensorRaw(LIGHT_SEN);
+    NumOut(0, LCD_LINE1, x);
+
+    Wait(30); // Wait a little bit
+  }
+
+
+} 
+

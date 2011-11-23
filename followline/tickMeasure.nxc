@@ -1,0 +1,16 @@
+#define LIGHT_SEN IN_3 // light sensor
+
+task main(){
+  int x = 0;
+  int old_x = 0;
+  while(true){
+    x = CurrentTick();
+    Wait(1000); // Wait a little bit
+    NumOut(0, LCD_LINE1, old_x);
+    NumOut(0, LCD_LINE2, x);
+    old_x = x;
+  }
+
+
+} 
+
